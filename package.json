@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "code-vis.start",
-        "title": "Show Code Map"
+        "command": "shadow-map.start",
+        "title": "Shadow Map: Open Visualizer"
       }
     ]
   },

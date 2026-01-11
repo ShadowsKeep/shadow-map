@@ -3,6 +3,7 @@ import { getUri } from "../utilities/getUri";
 import { getNonce } from "../utilities/getNonce";
 import { LanguageRegistry } from "../analyzer/LanguageRegistry";
 import { Logger } from "../utilities/Logger";
+import * as path from "path";
 
 /**
  * This class manages the state and behavior of ShadowMap webview panels.
@@ -168,21 +169,30 @@ export class ShadowMapPanel {
             return;
 
           case "openFile":
-            const filePath = message.file;
+            const relativePath = message.file;
             const line = message.line || 1;
             
-            Logger.debug(`Opening file: ${filePath}:${line}`);
+            // Resolve to absolute path using workspace root
+            const wsFolder = workspace.workspaceFolders ? workspace.workspaceFolders[0].uri.fsPath : "";
+            if (!wsFolder) {
+                Logger.error("No workspace folder found to resolve file path.");
+                return;
+            }
+
+            const absolutePath = path.join(wsFolder, relativePath);
+
+            Logger.debug(`Opening file: ${relativePath} -> ${absolutePath}:${line}`);
 
             try {
-                const doc = await workspace.openTextDocument(Uri.file(filePath));
+                const doc = await workspace.openTextDocument(Uri.file(absolutePath));
                 await window.showTextDocument(doc, { 
                     selection: new Range(new Position(line - 1, 0), new Position(line - 1, 0)),
                     preview: true,
                     viewColumn: ViewColumn.One
                 });
             } catch (error) {
-                Logger.error(`Could not open file: ${filePath}. Error: ${error}`);
-                window.showErrorMessage(`Could not open file: ${filePath}`);
+                Logger.error(`Could not open file: ${absolutePath}. Error: ${error}`);
+                window.showErrorMessage(`Could not open file: ${relativePath}`);
             }
             return;
         }
