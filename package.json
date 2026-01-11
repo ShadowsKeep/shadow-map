@@ -1,0 +1,49 @@
+{
+  "name": "shadow-map",
+  "displayName": "Shadow Map",
+  "version": "0.0.1",
+  "publisher": "user",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Visualization"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      {
+        "command": "code-vis.start",
+        "title": "Show Code Map"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "test": "npm run compile && node ./node_modules/mocha/bin/_mocha",
+    "install:all": "npm install && cd webview-ui && npm install",
+    "build:webview": "cd webview-ui && npm run build"
+  },
+  "dependencies": {
+    "dagre": "^0.8.5",
+    "ts-morph": "^27.0.2"
+  },
+  "devDependencies": {
+    "@types/dagre": "^0.7.53",
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "glob": "^10.3.10",
+    "mocha": "^10.2.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.3",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.4",
+    "@vscode/test-electron": "^2.3.9"
+  }
+}

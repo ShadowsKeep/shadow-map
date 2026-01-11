@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-geist-background: #000000;
+  --color-geist-surface: #111111;
+  --color-geist-accents-1: #111111;
+  --color-geist-accents-2: #333333;
+  --color-geist-accents-8: #fafafa;
+  --color-geist-error: #ff0000;
+  --color-geist-success: #0070f3;
+
+  --font-sans: "Inter", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-geist-background text-geist-accents-8 font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-geist-surface/90 backdrop-blur-2xl border border-geist-accents-2 shadow-2xl;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
