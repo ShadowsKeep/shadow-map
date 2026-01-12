@@ -1,6 +1,6 @@
 
 import { SourceFile } from "ts-morph";
-import { GraphData, CodeNode, CodeEdge } from "../../../types";
+import { GraphData, CodeNode, CodeEdge } from "../../types";
 
 export interface NavigationStrategy {
     getName(): string;
