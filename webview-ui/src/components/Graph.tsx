@@ -19,6 +19,7 @@ import { getLayoutedElements, transformDataToFlow } from '../utils/layout';
 interface GraphProps {
     data: GraphData;
     onNodeClick: (node: CodeNode) => void;
+    layoutDirection?: 'TB' | 'LR';
 }
 
 const GlassControls = () => {
@@ -39,18 +40,18 @@ const GlassControls = () => {
     );
 };
 
-const Graph: React.FC<GraphProps> = ({ data, onNodeClick }) => {
+const Graph: React.FC<GraphProps> = ({ data, onNodeClick, layoutDirection = 'LR' }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
     useEffect(() => {
         if (data) {
             const { flowNodes, flowEdges } = transformDataToFlow(data);
-            const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(flowNodes, flowEdges);
+            const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(flowNodes, flowEdges, layoutDirection);
             setNodes(layoutedNodes);
             setEdges(layoutedEdges);
         }
-    }, [data, setNodes, setEdges]);
+    }, [data, setNodes, setEdges, layoutDirection]);
 
     const handleNodeClick = (_: React.MouseEvent, node: Node) => {
         if (node.data.original) {

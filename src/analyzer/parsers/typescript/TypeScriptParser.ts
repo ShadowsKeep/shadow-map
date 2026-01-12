@@ -4,6 +4,7 @@ import { Project, SyntaxKind, Node, FunctionDeclaration, ClassDeclaration, Metho
 import path from 'path';
 import fs from 'fs';
 import { Logger } from '../../../utilities/Logger';
+import { NavigationParser } from '../NavigationParser';
 
 export class TypeScriptParser extends BaseParser {
   canParse(filePath: string): boolean {
@@ -157,6 +158,23 @@ export class TypeScriptParser extends BaseParser {
       });
     }
 
-    return { nodes, edges };
+    // Navigation Analysis
+    try {
+        const navParser = new NavigationParser();
+        const navGraph = navParser.analyze(sourceFiles, rootPath, { nodes, edges });
+        // analyze mutates arrays if passed by reference in my implementation?
+        // Wait, my implementation returns { nodes, edges }.
+        // Let's verify my NavigationParser implementation. 
+        // Yes, it pushes to the arrays passed in. But returns them too.
+        // So I can just return the result of analyze or rely on mutation.
+        // My implementation in NavigationParser.ts:
+        // const nodes = [...existingGraph.nodes]; // It CLONES them!
+        // So I must capture the return value.
+        
+        return navGraph;
+    } catch (e) {
+        Logger.error(`Navigation analysis failed: ${e}`);
+        return { nodes, edges }; // Return basic graph if nav fails
+    }
   }
 }

@@ -1,6 +1,6 @@
 export interface CodeNode {
   id: string;
-  type: 'file' | 'function' | 'class' | 'variable' | 'interface';
+  type: 'file' | 'function' | 'class' | 'variable' | 'interface' | 'screen';
   label: string;
   filePath: string;
   line?: number;
@@ -10,13 +10,14 @@ export interface CodeNode {
   loc?: number;
   complexity?: number;
   typeSignature?: string;
+  framework?: 'nextjs' | 'react-native' | 'expo' | 'other';
 }
 
 export interface CodeEdge {
   id: string;
   source: string;
   target: string;
-  type: 'import' | 'call' | 'usage' | 'inheritance';
+  type: 'import' | 'call' | 'usage' | 'inheritance' | 'navigation';
   label?: string;
 }
 
