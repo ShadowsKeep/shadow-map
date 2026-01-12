@@ -11,6 +11,10 @@ export interface CodeNode {
   complexity?: number;
   typeSignature?: string;
   framework?: 'nextjs' | 'react-native' | 'expo' | 'other';
+  // React Metadata
+  props?: string[];
+  state?: string[];
+  hooks?: string[];
 }
 
 export interface CodeEdge {

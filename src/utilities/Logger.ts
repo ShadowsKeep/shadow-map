@@ -1,40 +1,40 @@
-import * as vscode from 'vscode';
+import { ILogger } from './ILogger';
+
+class ConsoleLogger implements ILogger {
+    info(message: string): void {
+        console.log(`[INFO] ${message}`);
+    }
+    warn(message: string): void {
+        console.warn(`[WARN] ${message}`);
+    }
+    error(message: string | unknown): void {
+        console.error(`[ERROR] ${message}`);
+    }
+    debug(message: string): void {
+        console.debug(`[DEBUG] ${message}`);
+    }
+}
 
 export class Logger {
-    private static _outputChannel: vscode.OutputChannel;
+    private static implementation: ILogger = new ConsoleLogger();
 
-    private static get outputChannel(): vscode.OutputChannel {
-        if (!this._outputChannel) {
-            this._outputChannel = vscode.window.createOutputChannel("Shadow Map");
-        }
-        return this._outputChannel;
+    public static use(impl: ILogger) {
+        this.implementation = impl;
     }
 
     public static info(message: string) {
-        this.outputChannel.appendLine(`[INFO] ${message}`);
+        this.implementation.info(message);
     }
 
     public static warn(message: string) {
-        this.outputChannel.appendLine(`[WARN] ${message}`);
+        this.implementation.warn(message);
     }
 
     public static error(message: string | unknown) {
-        this.outputChannel.appendLine(`[ERROR] ${this.format(message)}`);
-        this.outputChannel.show(true); // Bring to front on error
+        this.implementation.error(message);
     }
 
     public static debug(message: string) {
-        // Could be conditional
-        this.outputChannel.appendLine(`[DEBUG] ${message}`);
-    }
-
-    private static format(value: unknown): string {
-        if (value instanceof Error) {
-            return value.stack || value.message;
-        }
-        if (typeof value === 'object') {
-            return JSON.stringify(value, null, 2);
-        }
-        return String(value);
+        this.implementation.debug(message);
     }
 }
