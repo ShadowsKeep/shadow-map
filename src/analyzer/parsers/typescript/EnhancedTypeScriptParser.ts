@@ -313,6 +313,17 @@ export class EnhancedTypeScriptParser extends BaseParser {
         // Extract props
         this.extractProps(node, props);
 
+        // Extract generic type parameters
+        const typeParameters = this.extractTypeParameters(node);
+
+        // Check async/generator flags
+        const isAsync = Node.isFunctionDeclaration(node) ? node.isAsync() :
+            Node.isArrowFunction(node) ? node.isAsync() : false;
+        const isGenerator = Node.isFunctionDeclaration(node) ? node.isGenerator() : false;
+
+        // Extract JSDoc documentation
+        const documentation = this.extractJSDoc(node);
+
         const nodeData: CodeNode = {
             id,
             type: nodeType,
@@ -324,6 +335,9 @@ export class EnhancedTypeScriptParser extends BaseParser {
             complexity,
             typeSignature: signature,
             isExported,
+            typeParameters: typeParameters.length ? typeParameters : undefined,
+            isAsync: isAsync || undefined,
+            isGenerator: isGenerator || undefined,
             props: props.length ? props : undefined,
             state: state.length ? state : undefined,
             hooks: hooks.length ? hooks : undefined,
@@ -331,6 +345,11 @@ export class EnhancedTypeScriptParser extends BaseParser {
             providesContext: providesContext.length ? providesContext : undefined,
             consumesContext: consumesContext.length ? consumesContext : undefined
         };
+
+        // Store documentation separately if exists (can be added to node if needed)
+        if (documentation) {
+            (nodeData as any).documentation = documentation;
+        }
 
         nodes.push(nodeData);
         this.nodeMap.set(id, nodeData);
@@ -779,6 +798,61 @@ export class EnhancedTypeScriptParser extends BaseParser {
         }
 
         return patterns;
+    }
+
+    /**
+     * Extracts generic type parameters from functions, classes, or interfaces
+     */
+    private extractTypeParameters(node: Node): string[] {
+        const typeParams: string[] = [];
+
+        try {
+            if (Node.isFunctionDeclaration(node) || Node.isArrowFunction(node) || Node.isFunctionExpression(node)) {
+                const params = node.getTypeParameters();
+                params.forEach(param => {
+                    typeParams.push(param.getName());
+                });
+            }
+            else if (Node.isInterfaceDeclaration(node) || Node.isClassDeclaration(node)) {
+                const params = node.getTypeParameters();
+                params.forEach(param => {
+                    typeParams.push(param.getName());
+                });
+            }
+        } catch (e) {
+            // Silently fail if type parameters can't be extracted
+        }
+
+        return typeParams;
+    }
+
+    /**
+     * Extracts JSDoc documentation from a node
+     */
+    private extractJSDoc(node: Node): string | undefined {
+        try {
+            const jsDocs = node.getJsDocs();
+            if (jsDocs.length > 0) {
+                const firstDoc = jsDocs[0];
+                const description = firstDoc.getDescription().trim();
+
+                // Get param and return tags
+                const tags = firstDoc.getTags();
+                const tagTexts = tags.map(tag => {
+                    const tagName = tag.getTagName();
+                    const comment = tag.getComment();
+                    return `@${tagName} ${typeof comment === 'string' ? comment : ''}`.trim();
+                }).filter(t => t.length > 0);
+
+                if (description || tagTexts.length > 0) {
+                    return [description, ...tagTexts].filter(Boolean).join('\n');
+                }
+            }
+        } catch (e) {
+            // Silently fail if JSDoc can't be extracted
+        }
+
+        return undefined;
     }
 
     /**
