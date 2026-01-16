@@ -278,14 +278,24 @@ export class EnhancedTypeScriptParser extends BaseParser {
         }
 
         // Basic complexity
-        const complexity = (text.match(/(if|else|for|while|switch|case|catch|&&|\|\||\?)/g) || []).length + 1;
+        const complexity = (text.match(/(if|else|for|while|switch|case|catch|&&|\|\||\\?)/g) || []).length + 1;
 
-        // Check if this is a React Component
+        // Check if this is a React Component or Custom Hook
         const isComponent = this.isReactComponent(node);
+        const isCustomHook = this.isCustomHook(node, name);
+
+        // Determine node type
+        let nodeType: CodeNode['type'] = 'function';
+        if (isCustomHook) {
+            nodeType = 'custom-hook';
+        } else if (isComponent) {
+            nodeType = 'component';
+        }
 
         // React Metadata
         const props: string[] = [];
         const hooks: string[] = [];
+        const customHooks: string[] = [];
         const state: string[] = [];
         const providesContext: string[] = [];
         const consumesContext: string[] = [];
@@ -293,12 +303,19 @@ export class EnhancedTypeScriptParser extends BaseParser {
         // Extract hooks and context
         this.extractReactMetadata(node, hooks, state, providesContext, consumesContext);
 
+        // Separate custom hooks from built-in hooks
+        hooks.forEach(hook => {
+            if (!['useState', 'useEffect', 'useContext', 'useReducer', 'useCallback', 'useMemo', 'useRef', 'useImperativeHandle', 'useLayoutEffect', 'useDebugValue', 'useId', 'useTransition', 'useDeferredValue'].includes(hook)) {
+                customHooks.push(hook);
+            }
+        });
+
         // Extract props
         this.extractProps(node, props);
 
         const nodeData: CodeNode = {
             id,
-            type: isComponent ? 'component' : 'function',
+            type: nodeType,
             label: name,
             filePath: filePath,
             line: node.getStartLineNumber(),
@@ -310,6 +327,7 @@ export class EnhancedTypeScriptParser extends BaseParser {
             props: props.length ? props : undefined,
             state: state.length ? state : undefined,
             hooks: hooks.length ? hooks : undefined,
+            customHooks: customHooks.length ? customHooks : undefined,
             providesContext: providesContext.length ? providesContext : undefined,
             consumesContext: consumesContext.length ? consumesContext : undefined
         };
@@ -381,18 +399,23 @@ export class EnhancedTypeScriptParser extends BaseParser {
 
         const init = node.getInitializer();
         let isComponent = false;
+        let isCustomHook = false;
         let signature = node.getType().getText();
 
-        // Check if variable is a component (arrow function returning JSX)
+        // Check if variable is a component or custom hook (arrow function/function expression)
         if (init && (Node.isArrowFunction(init) || Node.isFunctionExpression(init))) {
             isComponent = this.isReactComponent(init);
+            isCustomHook = this.isCustomHook(init, name);
 
-            if (isComponent) {
+            if (isComponent || isCustomHook) {
                 return this.processFunction(name, init, parentId, filePath, isExported, nodes, edges);
             }
         }
 
-        const complexity = (text.match(/(if|else|for|while|switch|case|catch|&&|\|\||\?)/g) || []).length + 1;
+        // Check for React patterns (memo, lazy, forwardRef, HOC)
+        const reactPatterns = this.detectReactPatterns(init, name, text);
+
+        const complexity = (text.match(/(if|else|for|while|switch|case|catch|&&|\|\||\\?)/g) || []).length + 1;
 
         const nodeData: CodeNode = {
             id,
@@ -404,7 +427,8 @@ export class EnhancedTypeScriptParser extends BaseParser {
             loc,
             complexity,
             typeSignature: signature,
-            isExported
+            isExported,
+            ...reactPatterns
         };
 
         nodes.push(nodeData);
@@ -685,6 +709,76 @@ export class EnhancedTypeScriptParser extends BaseParser {
                 }
             }
         }
+    }
+
+    /**
+     * Detects if a function is a custom React hook
+     */
+    private isCustomHook(node: Node, name: string): boolean {
+        // Must start with 'use' prefix (React convention)
+        if (!name.startsWith('use')) return false;
+
+        // Check if it calls other hooks
+        const hookCalls = node.getDescendantsOfKind(SyntaxKind.CallExpression);
+        const callsHooks = hookCalls.some(call => {
+            const expr = call.getExpression();
+            const callName = expr.getText();
+            return callName.startsWith('use') || callName.includes('.use');
+        });
+
+        return callsHooks;
+    }
+
+    /**
+     * Detects React optimization patterns: memo, lazy, forwardRef, HOCs
+     */
+    private detectReactPatterns(init: Node | undefined, name: string, text: string): Partial<CodeNode> {
+        const patterns: Partial<CodeNode> = {};
+
+        if (!init) return patterns;
+
+        // Check for React.memo()
+        if (Node.isCallExpression(init)) {
+            const expr = init.getExpression();
+            const callText = expr.getText();
+
+            if (callText === 'memo' || callText === 'React.memo') {
+                patterns.isMemoized = true;
+            }
+
+            if (callText === 'lazy' || callText === 'React.lazy') {
+                patterns.isLazy = true;
+            }
+
+            if (callText === 'forwardRef' || callText === 'React.forwardRef') {
+                patterns.usesForwardRef = true;
+            }
+
+            // Check for HOC pattern: function that takes a component and returns a component
+            // Example: const withAuth = (Component) => (props) => <Component {...props} />
+            const args = init.getArguments();
+            if (args.length > 0) {
+                const firstArg = args[0];
+                // If first arg is a component or has JSX in return, likely an HOC
+                if (Node.isIdentifier(firstArg) && /^[A-Z]/.test(firstArg.getText())) {
+                    // Receiving a component (capitalized name)
+                    patterns.wrapsComponent = firstArg.getText();
+                }
+            }
+        }
+
+        // Detect HOC by pattern: returns a function that returns JSX
+        if (Node.isArrowFunction(init)) {
+            const body = init.getBody();
+            if (Node.isArrowFunction(body) || Node.isFunctionExpression(body)) {
+                // Check if inner function returns JSX
+                if (this.isReactComponent(body)) {
+                    patterns.isHOC = true;
+                }
+            }
+        }
+
+        return patterns;
     }
 
     /**

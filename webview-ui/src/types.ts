@@ -1,23 +1,36 @@
 export interface CodeNode {
   id: string;
-  type: 'file' | 'function' | 'class' | 'variable' | 'interface' | 'screen' | 'component';
+  type: 'file' | 'function' | 'class' | 'variable' | 'interface' | 'screen' | 'component' | 'custom-hook';
   label: string;
   filePath: string;
-  line?: number;
-  code?: string;
-  // Metadata
   language?: string;
+  line?: number;
   loc?: number;
   complexity?: number;
+  code?: string;
   typeSignature?: string;
-  framework?: 'nextjs' | 'react-native' | 'expo' | 'other';
   isExported?: boolean;
+
+  // Advanced patterns
+  isHOC?: boolean;
+  wrapsComponent?: string;
+  isMemoized?: boolean;
+  isLazy?: boolean;
+  usesForwardRef?: boolean;
+  typeParameters?: string[];
+  isAsync?: boolean;
+  isGenerator?: boolean;
+
+  // Component/Function metadata
   props?: string[];
   state?: string[];
   hooks?: string[];
+  customHooks?: string[];
   usesComponents?: string[];
   providesContext?: string[];
   consumesContext?: string[];
+
+  // Call graph
   calls?: string[];
   calledBy?: string[];
 }

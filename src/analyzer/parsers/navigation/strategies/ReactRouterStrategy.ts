@@ -48,7 +48,6 @@ export class ReactRouterStrategy implements NavigationStrategy {
                                 type: 'screen',
                                 label: pathProp,
                                 filePath: path.relative(rootPath, file.getFilePath()), // Defined in this file
-                                framework: 'other', // Should maybe have 'react-router'
                                 line: jsx.getStartLineNumber()
                             });
                         }

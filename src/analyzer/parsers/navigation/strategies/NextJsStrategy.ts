@@ -40,7 +40,6 @@ export class NextJsStrategy implements NavigationStrategy {
                         type: 'screen',
                         label: route,
                         filePath,
-                        framework: 'nextjs',
                         line: 1
                     });
                 }
