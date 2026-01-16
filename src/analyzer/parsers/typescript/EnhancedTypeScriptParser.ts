@@ -103,19 +103,23 @@ export class EnhancedTypeScriptParser extends BaseParser {
                 });
             }
 
-            // Extract exports
+            // Extract exports (both named and default)
             const exportedDeclarations = sourceFile.getExportedDeclarations();
+            const defaultExport = sourceFile.getDefaultExportSymbol();
 
-            // Functions, Classes, Variables
+            // Functions, Classes, Variables, TypeScript Definitions
             const functions = sourceFile.getFunctions();
             const classes = sourceFile.getClasses();
             const variables = sourceFile.getVariableDeclarations();
+            const interfaces = sourceFile.getInterfaces();
+            const typeAliases = sourceFile.getTypeAliases();
+            const enums = sourceFile.getEnums();
 
             // Process Functions
             functions.forEach((f: FunctionDeclaration) => {
                 const name = f.getName();
                 if (name) {
-                    const isExported = exportedDeclarations.has(name);
+                    const isExported = exportedDeclarations.has(name) || (defaultExport?.getName() === name) || false;
                     this.processFunction(name, f, fileId, filePath, isExported, nodes, edges);
                 }
             });
@@ -124,7 +128,7 @@ export class EnhancedTypeScriptParser extends BaseParser {
             classes.forEach((c: ClassDeclaration) => {
                 const name = c.getName();
                 if (name) {
-                    const isExported = exportedDeclarations.has(name);
+                    const isExported = exportedDeclarations.has(name) || (defaultExport?.getName() === name) || false;
                     const classId = this.processClass(name, c, fileId, filePath, isExported, nodes, edges);
 
                     // Process Methods
@@ -170,9 +174,30 @@ export class EnhancedTypeScriptParser extends BaseParser {
             variables.forEach((v: VariableDeclaration) => {
                 const name = v.getName();
                 if (v.getParent()?.getParent()?.getKind() === SyntaxKind.SourceFile) {
-                    const isExported = exportedDeclarations.has(name);
+                    const isExported = exportedDeclarations.has(name) || (defaultExport?.getName() === name) || false;
                     this.processVariable(name, v, fileId, filePath, isExported, nodes, edges);
                 }
+            });
+
+            // Process TypeScript Interfaces
+            interfaces.forEach((iface) => {
+                const name = iface.getName();
+                const isExported = exportedDeclarations.has(name);
+                this.processInterface(name, iface, fileId, filePath, isExported, nodes, edges);
+            });
+
+            // Process Type Aliases
+            typeAliases.forEach((typeAlias) => {
+                const name = typeAlias.getName();
+                const isExported = exportedDeclarations.has(name);
+                this.processTypeAlias(name, typeAlias, fileId, filePath, isExported, nodes, edges);
+            });
+
+            // Process Enums
+            enums.forEach((enumDecl) => {
+                const name = enumDecl.getName();
+                const isExported = exportedDeclarations.has(name);
+                this.processEnum(name, enumDecl, fileId, filePath, isExported, nodes, edges);
             });
         }
 
@@ -371,6 +396,129 @@ export class EnhancedTypeScriptParser extends BaseParser {
             complexity,
             typeSignature: signature,
             isExported
+        };
+
+        nodes.push(nodeData);
+        this.nodeMap.set(id, nodeData);
+
+        edges.push({
+            id: `edge:${parentId}-${id}`,
+            source: parentId,
+            target: id,
+            type: 'usage'
+        });
+
+        return id;
+    }
+
+    private processInterface(
+        name: string,
+        node: any,
+        parentId: string,
+        filePath: string,
+        isExported: boolean,
+        nodes: CodeNode[],
+        edges: CodeEdge[]
+    ): string {
+        const id = `${parentId}:${name}`;
+        const text = node.getText();
+        const loc = node.getEndLineNumber() - node.getStartLineNumber() + 1;
+
+        // Extract interface properties
+        const properties = node.getProperties();
+        const propNames = properties.map((p: any) => p.getName());
+
+        const nodeData: CodeNode = {
+            id,
+            type: 'interface',
+            label: name,
+            filePath: filePath,
+            line: node.getStartLineNumber(),
+            code: text.slice(0, 300) + (text.length > 300 ? '...' : ''),
+            loc,
+            isExported,
+            typeSignature: `interface ${name} { ${propNames.join(', ')} }`
+        };
+
+        nodes.push(nodeData);
+        this.nodeMap.set(id, nodeData);
+
+        edges.push({
+            id: `edge:${parentId}-${id}`,
+            source: parentId,
+            target: id,
+            type: 'usage'
+        });
+
+        return id;
+    }
+
+    private processTypeAlias(
+        name: string,
+        node: any,
+        parentId: string,
+        filePath: string,
+        isExported: boolean,
+        nodes: CodeNode[],
+        edges: CodeEdge[]
+    ): string {
+        const id = `${parentId}:${name}`;
+        const text = node.getText();
+        const loc = node.getEndLineNumber() - node.getStartLineNumber() + 1;
+        const typeText = node.getType().getText();
+
+        const nodeData: CodeNode = {
+            id,
+            type: 'interface', // Use 'interface' type for type aliases too
+            label: name,
+            filePath: filePath,
+            line: node.getStartLineNumber(),
+            code: text.slice(0, 300) + (text.length > 300 ? '...' : ''),
+            loc,
+            isExported,
+            typeSignature: `type ${name} = ${typeText}`
+        };
+
+        nodes.push(nodeData);
+        this.nodeMap.set(id, nodeData);
+
+        edges.push({
+            id: `edge:${parentId}-${id}`,
+            source: parentId,
+            target: id,
+            type: 'usage'
+        });
+
+        return id;
+    }
+
+    private processEnum(
+        name: string,
+        node: any,
+        parentId: string,
+        filePath: string,
+        isExported: boolean,
+        nodes: CodeNode[],
+        edges: CodeEdge[]
+    ): string {
+        const id = `${parentId}:${name}`;
+        const text = node.getText();
+        const loc = node.getEndLineNumber() - node.getStartLineNumber() + 1;
+
+        // Get enum members
+        const members = node.getMembers();
+        const memberNames = members.map((m: any) => m.getName());
+
+        const nodeData: CodeNode = {
+            id,
+            type: 'variable', // Use 'variable' for enums
+            label: name,
+            filePath: filePath,
+            line: node.getStartLineNumber(),
+            code: text.slice(0, 300) + (text.length > 300 ? '...' : ''),
+            loc,
+            isExported,
+            typeSignature: `enum ${name} { ${memberNames.join(', ')} }`
         };
 
         nodes.push(nodeData);
