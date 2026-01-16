@@ -3,16 +3,16 @@
   "displayName": "Shadow Map - Code Visualizer",
   "description": "Visualize TypeScript/React codebases with comprehensive dependency graphs, component mapping, and AI-ready context export",
   "version": "2.0.0",
-  "publisher": "nickloubser",
+  "publisher": "shadowskeep",
   "icon": "images/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NICKLOUBSER/shadow-map"
+    "url": "https://github.com/shadowskeep/shadow-map"
   },
   "bugs": {
-    "url": "https://github.com/NICKLOUBSER/shadow-map/issues"
+    "url": "https://github.com/shadowskeep/shadow-map/issues"
   },
-  "homepage": "https://github.com/NICKLOUBSER/shadow-map#readme",
+  "homepage": "https://github.com/shadowskeep/shadow-map#readme",
   "license": "MIT",
   "engines": {
     "vscode": "^1.80.0"
