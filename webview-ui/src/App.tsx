@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Graph from './components/Graph';
 import NodeDetails from './components/NodeDetails';
+import SearchBar from './components/SearchBar';
 import { useGraphData } from './hooks/useGraphData';
 import { CodeNode } from './types';
 
@@ -8,16 +9,24 @@ function App() {
     const { data, loading, error } = useGraphData();
     const [selectedNode, setSelectedNode] = useState<CodeNode | null>(null);
     const [viewMode, setViewMode] = useState<'dependency' | 'navigation'>('dependency');
+    const [showSearch, setShowSearch] = useState(false);
+    const [filteredNodesBySearch, setFilteredNodesBySearch] = useState<CodeNode[]>([]);
 
     if (loading && !data) return <div className="flex items-center justify-center h-screen text-geist-accents-5">Loading...</div>;
     if (error) return <div className="flex items-center justify-center h-screen text-red-500">Error: {error}</div>;
     if (!data) return null;
 
     // Filter data based on view mode
-    const filteredNodes = data.nodes.filter(n => {
+    let filteredNodes = data.nodes.filter(n => {
         if (viewMode === 'navigation') return n.type === 'screen';
         return n.type !== 'screen';
     });
+
+    // Apply search filter if active
+    if (showSearch && filteredNodesBySearch.length > 0) {
+        const searchIds = new Set(filteredNodesBySearch.map(n => n.id));
+        filteredNodes = filteredNodes.filter(n => searchIds.has(n.id));
+    }
 
     const filteredEdges = data.edges.filter(e => {
         if (viewMode === 'navigation') return e.type === 'navigation';
@@ -66,6 +75,19 @@ function App() {
 
                 <div className="flex items-center gap-3">
                     <button
+                        onClick={() => setShowSearch(!showSearch)}
+                        className={`h-8 px-3 rounded-md text-xs font-medium transition-colors flex items-center gap-2 ${showSearch
+                                ? 'bg-indigo-600 text-white border border-indigo-500'
+                                : 'bg-geist-surface border border-geist-accents-2 text-geist-accents-5 hover:text-white hover:border-white'
+                            }`}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        Search
+                    </button>
+                    <button
                         onClick={() => {
                             const context = JSON.stringify({
                                 summary: `Shadow Map Context (${viewMode})`,
@@ -102,6 +124,14 @@ function App() {
                     </div>
                 </div>
             </div>
+
+            {/* Search Bar */}
+            {showSearch && (
+                <SearchBar
+                    nodes={data.nodes.filter(n => viewMode === 'navigation' ? n.type === 'screen' : n.type !== 'screen')}
+                    onFilterChange={setFilteredNodesBySearch}
+                />
+            )}
 
             <div className="flex-1 relative">
                 <Graph
