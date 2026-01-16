@@ -538,7 +538,7 @@ export class EnhancedTypeScriptParser extends BaseParser {
      * Detects if a function/arrow function is a React component
      */
     private isReactComponent(node: Node): boolean {
-        // Check if returns JSX
+        // Check for explicit return statements with JSX
         const returnStatements = node.getDescendantsOfKind(SyntaxKind.ReturnStatement);
         const hasJsxReturn = returnStatements.some(r => {
             const expr = r.getExpression();
@@ -547,15 +547,28 @@ export class EnhancedTypeScriptParser extends BaseParser {
 
         if (hasJsxReturn) return true;
 
-        // Check if directly returns JSX (arrow function without explicit return)
+        // Check for implicit JSX return in arrow functions: const Foo = () => <div/>
         if (Node.isArrowFunction(node)) {
             const body = node.getBody();
             if (Node.isJsxElement(body) || Node.isJsxSelfClosingElement(body) || Node.isJsxFragment(body)) {
                 return true;
             }
+
+            // Check parenthesized expressions: const Foo = () => (<div/>)
+            if (Node.isParenthesizedExpression(body)) {
+                const inner = body.getExpression();
+                if (Node.isJsxElement(inner) || Node.isJsxSelfClosingElement(inner) || Node.isJsxFragment(inner)) {
+                    return true;
+                }
+            }
         }
 
-        return false;
+        // Check if function body contains ANY JSX elements (more general check)
+        const hasJsxElements = node.getDescendantsOfKind(SyntaxKind.JsxElement).length > 0 ||
+            node.getDescendantsOfKind(SyntaxKind.JsxSelfClosingElement).length > 0 ||
+            node.getDescendantsOfKind(SyntaxKind.JsxFragment).length > 0;
+
+        return hasJsxElements;
     }
 
     /**
