@@ -237,3 +237,4 @@ return (
 };
 
 export default NodeDetails;
+
