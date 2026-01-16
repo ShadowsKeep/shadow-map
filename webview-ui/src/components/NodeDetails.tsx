@@ -28,30 +28,97 @@ const NodeDetails: React.FC<NodeDetailsProps> = ({ node, data, onClose }) => {
             .map(e => data.nodes.find(n => n.id === e.source))
             .filter(Boolean);
 
-        // Construct AI-readbale context
-        const context = {
-            subject: {
+        // Build comprehensive AI-readable context
+        const context: any = {
+            node: {
                 id: node.id,
                 type: node.type,
                 name: node.label,
                 file: node.filePath,
-                signature: node.typeSignature,
-                code: node.code,
-                complexity: node.complexity
+                line: node.line || 1,
+                exported: node.isExported || false
             },
-            relations: {
-                imports: imports.map(n => ({ id: n?.id, name: n?.label, type: n?.type })),
-                used_by: usedBy.map(n => ({ id: n?.id, name: n?.label, type: n?.type }))
-            },
-            summary: `Context for ${node.type} '${node.label}'`
+            metadata: {
+                complexity: node.complexity,
+                loc: node.loc,
+                signature: node.typeSignature
+            }
         };
 
-        const contextString = JSON.stringify(context, null, 2);
+        // Add React-specific data if component
+        if (node.type === 'component') {
+            context.react = {
+                props: node.props || [],
+                state: node.state || [],
+                hooks: node.hooks || [],
+                providesContext: node.providesContext || [],
+                consumesContext: node.consumesContext || [],
+                usesComponents: node.usesComponents || []
+            };
+        }
 
-        navigator.clipboard.writeText(contextString).then(() => {
+        // Add relationships
+        context.relationships = {
+            imports: imports.map(n => ({
+                name: n?.label,
+                type: n?.type,
+                from: n?.filePath
+            })),
+            importedBy: usedBy.map(n => ({
+                name: n?.label,
+                type: n?.type,
+                from: n?.filePath
+            })),
+            calls: node.calls || [],
+            calledBy: node.calledBy || []
+        };
+
+        // Add code preview
+        context.code = {
+            preview: node.code,
+            fullPath: node.filePath
+        };
+
+        // Generate markdown summary
+        const markdown = `
+# ${node.label} (${node.type})
+
+**File**: \`${node.filePath}:${node.line || 1}\`  
+**Exported**: ${node.isExported ? 'Yes' : 'No'}  
+**Complexity**: ${node.complexity || 'N/A'}  
+**Lines of Code**: ${node.loc || 'N/A'}
+
+${node.typeSignature ? `## Signature\n\`\`\`typescript\n${node.typeSignature}\n\`\`\`` : ''}
+
+${node.type === 'component' ? `
+## React Details
+- **Props**: ${node.props?.join(', ') || 'None'}
+- **State**: ${node.state?.join(', ') || 'None'}
+- **Hooks**: ${node.hooks?.join(', ') || 'None'}
+- **Uses Components**: ${node.usesComponents?.join(', ') || 'None'}
+- **Consumes Context**: ${node.consumesContext?.join(', ') || 'None'}
+- **Provides Context**: ${node.providesContext?.join(', ') || 'None'}
+` : ''}
+
+## Dependencies
+${imports.length > 0 ? imports.map(n => `- ${n?.label} (${n?.type}) from \`${n?.filePath}\``).join('\n') : '- None'}
+
+## Used By
+${usedBy.length > 0 ? usedBy.map(n => `- ${n?.label} (${n?.type}) from \`${n?.filePath}\``).join('\n') : '- None'}
+
+${node.calls && node.calls.length > 0 ? `\n## Calls\n${node.calls.join('\n- ')}` : ''}
+${node.calledBy && node.calledBy.length > 0 ? `\n## Called By\n${node.calledBy.join('\n- ')}` : ''}
+
+${node.code ? `\n## Code Preview\n\`\`\`typescript\n${node.code}\n\`\`\`` : ''}
+`.trim();
+
+        // Combine JSON + Markdown
+        const output = `${JSON.stringify(context, null, 2)}\n\n---\n\n${markdown}`;
+
+        navigator.clipboard.writeText(output).then(() => {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-            console.log("Node specific context copied");
+            console.log("Enhanced AI context copied to clipboard");
         });
     };
 
