@@ -831,21 +831,25 @@ export class EnhancedTypeScriptParser extends BaseParser {
      */
     private extractJSDoc(node: Node): string | undefined {
         try {
-            const jsDocs = node.getJsDocs();
-            if (jsDocs.length > 0) {
-                const firstDoc = jsDocs[0];
-                const description = firstDoc.getDescription().trim();
+            // getJsDocs() is only available on specific node types
+            if (Node.isFunctionDeclaration(node) || Node.isClassDeclaration(node) ||
+                Node.isMethodDeclaration(node) || Node.isInterfaceDeclaration(node)) {
+                const jsDocs = node.getJsDocs();
+                if (jsDocs.length > 0) {
+                    const firstDoc = jsDocs[0];
+                    const description = firstDoc.getDescription().trim();
 
-                // Get param and return tags
-                const tags = firstDoc.getTags();
-                const tagTexts = tags.map(tag => {
-                    const tagName = tag.getTagName();
-                    const comment = tag.getComment();
-                    return `@${tagName} ${typeof comment === 'string' ? comment : ''}`.trim();
-                }).filter(t => t.length > 0);
+                    // Get param and return tags
+                    const tags = firstDoc.getTags();
+                    const tagTexts = tags.map((tag: any) => {
+                        const tagName = tag.getTagName();
+                        const comment = tag.getComment();
+                        return `@${tagName} ${typeof comment === 'string' ? comment : ''}`.trim();
+                    }).filter((t: string) => t.length > 0);
 
-                if (description || tagTexts.length > 0) {
-                    return [description, ...tagTexts].filter(Boolean).join('\n');
+                    if (description || tagTexts.length > 0) {
+                        return [description, ...tagTexts].filter(Boolean).join('\n');
+                    }
                 }
             }
         } catch (e) {
