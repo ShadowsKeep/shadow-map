@@ -171,9 +171,15 @@ export class EnhancedTypeScriptParser extends BaseParser {
             });
 
             // Process Variables (potential components)
+            // Hierarchy: SourceFile → VariableStatement → VariableDeclarationList → VariableDeclaration
             variables.forEach((v: VariableDeclaration) => {
                 const name = v.getName();
-                if (v.getParent()?.getParent()?.getKind() === SyntaxKind.SourceFile) {
+                // Check if this is a top-level variable (3 parents up to SourceFile)
+                const parent = v.getParent(); // VariableDeclarationList
+                const grandParent = parent?.getParent(); // VariableStatement
+                const greatGrandParent = grandParent?.getParent(); // SourceFile
+
+                if (greatGrandParent && Node.isSourceFile(greatGrandParent)) {
                     const isExported = exportedDeclarations.has(name) || (defaultExport?.getName() === name) || false;
                     this.processVariable(name, v, fileId, filePath, isExported, nodes, edges);
                 }
