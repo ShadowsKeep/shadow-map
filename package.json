@@ -7,12 +7,12 @@
   "icon": "images/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/shadowskeep/shadow-map"
+    "url": "https://github.com/ShadowsKeep/shadow-map"
   },
   "bugs": {
-    "url": "https://github.com/shadowskeep/shadow-map/issues"
+    "url": "https://github.com/ShadowsKeep/shadow-map/issues"
   },
-  "homepage": "https://github.com/shadowskeep/shadow-map#readme",
+  "homepage": "https://github.com/ShadowsKeep/shadow-map#readme",
   "license": "MIT",
   "engines": {
     "vscode": "^1.80.0"
