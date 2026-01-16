@@ -239,7 +239,10 @@ export class EnhancedTypeScriptParser extends BaseParser {
             });
         });
 
-        Logger.info(`[Pass 2] Call graph complete. ${this.callGraph.size} nodes have outgoing calls.`);
+        // Log statistics
+        const nodesWithCalls = Array.from(this.nodeMap.values()).filter(n => n.calls && n.calls.length > 0).length;
+        const nodesWithComponents = Array.from(this.nodeMap.values()).filter(n => n.usesComponents && n.usesComponents.length > 0).length;
+        Logger.info(`[Pass 2] Call graph complete: ${nodesWithCalls} nodes have outgoing calls, ${nodesWithComponents} components use other components.`);
 
         // Navigation Analysis
         try {
